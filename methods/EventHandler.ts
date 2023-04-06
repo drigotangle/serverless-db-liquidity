@@ -1,8 +1,6 @@
 import { 
     getPoolAddress,
     getBlockTimestamp,
-    sqrtPriceToPrice,
-    getPoolData,
     getWethPriceAndLiquidity,
     tokenInstance,
     nftManagerInstance

@@ -8,3 +8,20 @@ provider:
 functions:
   function1:
     handler: index.handler
+    events: 
+    -http:
+    path: /{eventName}/{tokenId}/{blockNumber}/{amount0}/{amount1}/{hash}
+    method: get 
+    private: true
+    request: 
+      parameters: 
+        paths: 
+          eventName: true
+          tokenId: true
+          blockNumber: true
+          amount0: true
+          amount1: true
+          hash: true
+
+
+
