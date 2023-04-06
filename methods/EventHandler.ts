@@ -6,7 +6,7 @@ import {
     nftManagerInstance
  } from './'
 
-import { NFT_MANAGER_ADDRESS, WETH_ADDRESS, provider } from '../constants/index'
+import { WETH_ADDRESS } from '../constants/index'
 import { insertLiquidity, updateTVL } from './CRUD'
 
 const ERC20 = require('../ABI/ERC20.json')
@@ -22,8 +22,8 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
         const token0Address = position.token0
         const token1Address = position.token1
 
-        const token0 = tokenInstance(token0Address, ERC20, provider)
-        const token1 = tokenInstance(token1Address, ERC20, provider)
+        const token0 = tokenInstance(token0Address)
+        const token1 = tokenInstance(token1Address)
 
         const symbol0 = await token0.symbol()
         const symbol1 = await token1.symbol()
@@ -82,6 +82,7 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
             }
 
             if(![position.token1, position.token2].includes(WETH_ADDRESS)){
+
                 const priceAndLiquidity0 = await getWethPriceAndLiquidity(token0Address, blockNumber)
                 const value0 = (priceAndLiquidity0[0]?.price ?? 0) * (amount0) / (10 ** decimals0)
                 const priceAndLiquidity1 = await getWethPriceAndLiquidity(token1Address, blockNumber)
@@ -89,7 +90,6 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
                 const sumValue = value0 + value1
 
                 await updateTVL(eventName, blockNumber, time, hash, sumValue, poolAddress)
-
 
                 await insertLiquidity(
                     blockNumber,

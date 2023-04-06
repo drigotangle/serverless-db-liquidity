@@ -2,7 +2,7 @@ import ethers from 'ethers'
 import moment from 'moment'
 
 import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS } from '../constants/index'
-import { IBlock, IPoolData, IPoolsArr } from '../interfaces'
+import { IPoolData, IPoolsArr } from '../interfaces'
 
 const FACTORY_ARTIFACT = require('../ABI/V3Factory.json')
 const POOL_ARTIFACT = require('../ABI/V3Pool.json')
@@ -11,8 +11,8 @@ const NftManager = require('../ABI/Nonfungiblepositionmanager.json')
 
 
 
-export const tokenInstance = (address, abi, provider): any => {
-    const token = new ethers.Contract(address, abi, provider)
+export const tokenInstance = (address): any => {
+    const token = new ethers.Contract(address, ERC20_ABI, provider)
     return token
 }
 
@@ -23,7 +23,7 @@ export const nftManagerInstance = (): any => {
 
 export const getPoolAddress = async (token0, token1, fee): Promise<string | any> => {
     try {
-        const factory = new ethers.Contract('FACTORY_ADDRESS', FACTORY_ARTIFACT.abi, provider)
+        const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
         const poolAddress = await factory.getPool(token0, token1, fee)
         return poolAddress
     } catch (error) {
@@ -85,7 +85,7 @@ export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IP
     const feesArr = [500, 3000, 10000]
     let poolsArr: IPoolsArr[] = []
     try {
-            const factory = new ethers.Contract('FACTORY_ADDRESS', FACTORY_ARTIFACT.abi, provider)
+            const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
             for(let i = 0; i < feesArr.length; i++){
                 const fee = feesArr[i]
                 const poolAddress = await factory.getPool(address, WETH_ADDRESS, fee)
