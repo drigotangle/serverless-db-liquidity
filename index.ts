@@ -1,6 +1,7 @@
 import { eventHandler } from './methods/EventHandler'
 
 module.exports.handler = async (event) => {
+  
   const eventName = event.pathParameters.eventName;
 	const tokenId = event.pathParameters.tokenId;
 	const blockNumber = event.pathParameters.blockNumber;

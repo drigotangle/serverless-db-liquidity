@@ -1,12 +1,14 @@
 import ethers from 'ethers'
 import moment from 'moment'
 
-import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS } from '../constants/index'
+import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS } from '../constants/index'
 import { IBlock, IPoolData, IPoolsArr } from '../interfaces'
 
 const FACTORY_ARTIFACT = require('../ABI/V3Factory.json')
 const POOL_ARTIFACT = require('../ABI/V3Pool.json')
 const ERC20_ABI = require('../ABI/ERC20.json')
+const NftManager = require('../ABI/Nonfungiblepositionmanager.json')
+
 
 
 export const tokenInstance = (address, abi, provider): any => {
@@ -14,14 +16,14 @@ export const tokenInstance = (address, abi, provider): any => {
     return token
 }
 
-export const nftManagerInstance = (address, abi, provider): any => {
-    const nftManager = new ethers.Contract(address, abi, provider) 
+export const nftManagerInstance = (): any => {
+    const nftManager = new ethers.Contract(NFT_MANAGER_ADDRESS, NftManager.abi, provider) 
     return nftManager
 }
 
 export const getPoolAddress = async (token0, token1, fee): Promise<string | any> => {
     try {
-        const factory = new ethers.Contract('0x8eB105CFc7ec7ebF126586689683a9104E6ec91b', FACTORY_ARTIFACT.abi, provider)
+        const factory = new ethers.Contract('FACTORY_ADDRESS', FACTORY_ARTIFACT.abi, provider)
         const poolAddress = await factory.getPool(token0, token1, fee)
         return poolAddress
     } catch (error) {
@@ -83,7 +85,7 @@ export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IP
     const feesArr = [500, 3000, 10000]
     let poolsArr: IPoolsArr[] = []
     try {
-            const factory = new ethers.Contract('0x8eB105CFc7ec7ebF126586689683a9104E6ec91b', FACTORY_ARTIFACT.abi, provider)
+            const factory = new ethers.Contract('FACTORY_ADDRESS', FACTORY_ARTIFACT.abi, provider)
             for(let i = 0; i < feesArr.length; i++){
                 const fee = feesArr[i]
                 const poolAddress = await factory.getPool(address, WETH_ADDRESS, fee)

@@ -10,11 +10,10 @@ import { NFT_MANAGER_ADDRESS, WETH_ADDRESS, provider } from '../constants/index'
 import { insertLiquidity, updateTVL } from './CRUD'
 
 const ERC20 = require('../ABI/ERC20.json')
-const NftManager = require('../ABI/Nonfungiblepositionmanager.json')
 
 export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amount1, hash) => {
 
-    const NFPM = nftManagerInstance(NFT_MANAGER_ADDRESS, NftManager.abi, provider)
+    const NFPM = nftManagerInstance()
 
     try {
         const position = await NFPM.positions(BigInt(tokenId))
