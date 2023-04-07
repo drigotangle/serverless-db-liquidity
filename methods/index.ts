@@ -1,7 +1,7 @@
 import ethers from 'ethers'
 import moment from 'moment'
 
-import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS } from '../constants/index'
+import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS, FEE_ARR, PINNED_PAIRS } from '../constants/index'
 import { IPoolData, IPoolsArr } from '../interfaces'
 
 const FACTORY_ARTIFACT = require('../ABI/V3Factory.json')
@@ -24,6 +24,11 @@ export const nftManagerInstance = (): any => {
 export const poolInstance = (address: string) => {
     const pool = new ethers.Contract(address, POOL_ARTIFACT, provider)
     return pool
+}
+
+export const factoryInstance = () => {
+    const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
+    return factory
 }
 
 export const getPoolAddress = async (token0, token1, fee): Promise<string | any> => {
@@ -68,6 +73,35 @@ export const formatPrice = (token0Address, token1Address, decimals0, decimals1, 
     return formatedPrice
 }
 
+export const formatAmount = (amount, decimals): number => {
+    const formatedAmount = amount * (10 ** decimals)
+    return formatedAmount
+}
+
+export const formatFee = (fee, value): number => {
+    const feePaid = (fee / 10000) * value
+    return feePaid
+}
+
+export const choosePrice = 
+    (
+    wethPrice: number | undefined = undefined, 
+    deeperPrice: number | undefined = undefined
+    ): number | undefined => {
+    if(![wethPrice, deeperPrice].includes(undefined)){
+        //@ts-ignore
+        return wethPrice > deeperPrice ? wethPrice : deeperPrice
+    }
+    
+    if(wethPrice === undefined && deeperPrice !== undefined){
+        return deeperPrice
+    }
+
+    if(wethPrice !== undefined && wethPrice === undefined){
+        return wethPrice
+    }
+}
+
 export const getPoolData = async (poolAddress, blockNumber): Promise<IPoolData | any> => {
     try {
         const pool = new ethers.Contract(poolAddress, POOL_ARTIFACT, provider)
@@ -87,17 +121,16 @@ export const getPoolData = async (poolAddress, blockNumber): Promise<IPoolData |
 }
 
 export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IPoolsArr[] | any> => {
-    const feesArr = [500, 3000, 10000]
     let poolsArr: IPoolsArr[] = []
     try {
-            const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
-            for(let i = 0; i < feesArr.length; i++){
-                const fee = feesArr[i]
+            const factory = factoryInstance()
+            for(let i = 0; i < FEE_ARR.length; i++){
+                const fee = FEE_ARR[i]
                 const poolAddress = await factory.getPool(address, WETH_ADDRESS, fee)
                 if(poolAddress !== ZERO_ADDRESS){
                     const poolContract: IPoolData = await getPoolData(poolAddress, blockNumber)
                     let price = poolContract?.price
-                    const wethContract = new ethers.Contract(WETH_ADDRESS, ERC20_ABI, provider)
+                    const wethContract = tokenInstance(WETH_ADDRESS)
                     const wethBalance = await wethContract.balanceOf(poolAddress, {blockTag: blockNumber})
                     poolsArr.push({
                         poolAddress: poolAddress,
@@ -112,5 +145,35 @@ export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IP
             return poolsArr
     } catch (error) {
         console.log(error, 'for getWethPriceAndLiquidity')
+    }
+}
+
+export const getDeeperPriceAndLiquidity = async (address, blockNumber):  Promise<IPoolsArr[] | any> => {
+    let poolsArr: IPoolsArr[] = []
+    try {
+        const factory = factoryInstance()
+        for(const fee of FEE_ARR){
+            for(const pinnedAddress of PINNED_PAIRS){
+                const pinnedPoolAddress = await factory.getPool(address, pinnedAddress, fee)
+                if(pinnedPoolAddress !== ZERO_ADDRESS){
+                    const pinnedPool: IPoolData = await getPoolData(pinnedPoolAddress, blockNumber)
+                    const wethPool: IPoolsArr[] = await getWethPriceAndLiquidity(pinnedAddress, blockNumber)
+                    const wethContract = tokenInstance(WETH_ADDRESS)
+                    const wethBalance = await wethContract.balanceOf(wethPool[0].poolAddress, {blockTag: blockNumber})
+                    const price = pinnedPool.price * wethPool[0].price
+                    poolsArr.push({
+                        poolAddress: pinnedPoolAddress,
+                        price: price,
+                        wethBalance: Number(wethBalance._hex) / (10 ** 18)
+                    })
+                }
+            }
+        }
+        poolsArr.sort((a, b) => {
+            return b.wethBalance - a.wethBalance
+        })
+        return poolsArr
+    } catch (error) {
+        
     }
 }
