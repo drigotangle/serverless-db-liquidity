@@ -19,20 +19,39 @@ export const getLastTVL = async () => {
     }
 }
 
-export const insertLiquidity = async (
-    blockNumber: number,
-    eventName: string,
+    // token0: events.args.token0,
+    // token1: events.args.token1,
+    // symbol0: symbol0,
+    // symbol1: symbol1,
+    // name0: name0,
+    // name1: name1,
+    // decimals0: decimals0,
+    // decimals1: decimals1,
+    // fee: events.args.fee,
+    // tickSpacing: events.args.tickSpacing,
+    // pool: events.args.pool,
+    // price: [{time: time, price: 0}],
+    // liquidity: [{time: time, liquidity: Number(liquidity._hex / (10 ** 18))}],
+    // block: blockNumber,
+    // hash: events.transactionHash   
+
+export const insertPool = async (
     token0Address: string,
     token1Address: string,
-    value: number,
     symbol0: string,
     symbol1: string,
-    amount0: number,
-    amount1: number,
-    account: string,
+    name0: string,
+    name1: string,
+    decimals0: number,
+    decimals1: number,
+    liquidity: number,
+    price: number,
+    fee: number,
+    tickSpacing: number,
+    poolAddress: string,
     time: string,
-    hash: string,
-    poolAddress: string
+    blockNumber: number,
+    hash: string
 ) => {
     try {
 
@@ -41,21 +60,24 @@ export const insertLiquidity = async (
          */
 
         await mongoClient.connect()
-        const liquidityTxCollection = await mongoClient.db("tangle-db-shimmer").collection("liquidity-transactions")
-        await liquidityTxCollection.insertOne({ 
-            block: blockNumber,
-            eventName: eventName,
-            token0Address: token0Address,
-            token1Address: token1Address,
-            value: value,
+        const poolsCollection = await mongoClient.db("tangle-db-shimmer").
+        collection("pools")
+        await poolsCollection.insertOne({
+            token0: token0Address,
+            token1: token1Address,
             symbol0: symbol0,
             symbol1: symbol1,
-            amount0: amount0,
-            amount1: amount1,
-            account: account,
-            time: time,
-            hash: hash,
-            poolAddress: poolAddress
+            name0: name0,
+            name1: name1,
+            decimals0: decimals0,
+            decimals1: decimals1,
+            fee: fee,
+            tickSpacing: tickSpacing,
+            pool: poolAddress,
+            price: [{time: time, price: price}],
+            liquidity: [{time: time, liquidity: liquidity}],
+            block: blockNumber,
+            hash: hash          
         })
     } catch (error) {
         

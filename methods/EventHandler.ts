@@ -1,27 +1,20 @@
 import { 
-    getPoolAddress,
+    formatPrice,
     getBlockTimestamp,
     getWethPriceAndLiquidity,
+    poolInstance,
+    sqrtPriceToPrice,
     tokenInstance,
-    nftManagerInstance
  } from './'
 
 import { WETH_ADDRESS } from '../constants/index'
-import { insertLiquidity, updateTVL } from './CRUD'
+import { insertPool } from './CRUD'
 
 const ERC20 = require('../ABI/ERC20.json')
 
-export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amount1, hash) => {
-
-    const NFPM = nftManagerInstance()
-
+export const eventHandler = async (blockNumber, poolAddress, token0Address, token1Address, fee, tickSpacing, hash) => {
+       
     try {
-        const position = await NFPM.positions(BigInt(tokenId))
-        const fee = position.fee
-
-        const token0Address = position.token0
-        const token1Address = position.token1
-
         const token0 = tokenInstance(token0Address)
         const token1 = tokenInstance(token1Address)
 
@@ -29,85 +22,52 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
         const symbol1 = await token1.symbol()
         const decimals0 = await token0.decimals()
         const decimals1 = await token1.decimals()
-        const poolAddress = await getPoolAddress(position.token0, position.token1, fee)
-        const account = await NFPM.ownerOf(Number(tokenId))
+        const name0 = await token0.name()
+        const name1 = await token1.name()
         const time = await getBlockTimestamp(blockNumber)
-        
-        amount0 = amount0 / (10 ** decimals0)
-        amount1 = amount1 / (10 ** decimals1)
-    
+        const balance1 = await token1.balanceOf(poolAddress)
+        let price
+        let liquidity
 
-            if(position.token0 === WETH_ADDRESS){
-                const value = amount0 * 2
+        if(token1Address === WETH_ADDRESS){
+            const pool = poolInstance(poolAddress)
+            const slot0 = await pool.slot({blockTag: blockNumber})
+            const sqrtPrice = slot0.sqrtPriceX96._hex
+            price = sqrtPriceToPrice(sqrtPrice, decimals0, decimals1)
+        }
 
-                await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
+        if(token0Address === WETH_ADDRESS){
+            const pool = poolInstance(poolAddress)
+            const slot0 = await pool.slot({blockTag: blockNumber})
+            const sqrtPrice = slot0.sqrtPriceX96._hex
+            const formatedPrice = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPrice)
+            price = formatedPrice
+        }
 
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    value,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
-            }
+        if(![token0Address, token1Address].includes(WETH_ADDRESS)){
+            const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
+            price = wethPrice[0].price
+            liquidity = (Number(balance1._hex) / (10 ** decimals1)) * (wethPrice[0].price ?? 0)
+        }
 
-            if(position.token1 === WETH_ADDRESS){
-                const value = amount1 * 2
-
-                await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
-
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    value,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
-            }
-
-            if(![position.token1, position.token2].includes(WETH_ADDRESS)){
-
-                const priceAndLiquidity0 = await getWethPriceAndLiquidity(token0Address, blockNumber)
-                const value0 = (priceAndLiquidity0[0]?.price ?? 0) * (amount0) / (10 ** decimals0)
-                const priceAndLiquidity1 = await getWethPriceAndLiquidity(token1Address, blockNumber)
-                const value1 = (priceAndLiquidity1[0]?.price ?? 0) * (Number(amount0) / (10 ** decimals0))
-                const sumValue = value0 + value1
-
-                await updateTVL(eventName, blockNumber, time, hash, sumValue, poolAddress)
-
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    sumValue,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
-            }
-
+        await insertPool(
+            token0Address,
+            token1Address,
+            symbol0,
+            symbol1,
+            name0,
+            name1,
+            decimals0,
+            decimals1,
+            liquidity,
+            price,
+            fee,
+            tickSpacing,
+            poolAddress,
+            time,
+            blockNumber,
+            hash
+            )
     } catch (error) {
         
     }

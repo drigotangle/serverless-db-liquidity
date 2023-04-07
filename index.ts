@@ -2,19 +2,21 @@ import { eventHandler } from './methods/EventHandler'
 
 module.exports.handler = async (event) => {
   
-  const eventName = event.pathParameters.eventName;
-	const tokenId = event.pathParameters.tokenId;
-	const blockNumber = event.pathParameters.blockNumber;
-	const amount0 = event.pathParameters.amount0;
-	const amount1 = event.pathParameters.amount1;
+  const blockNumber = event.pathParameters.blockNumber;
+  const poolAddress = event.pathParameters.pool;
+	const token0Address = event.pathParameters.token0;
+	const token1Address = event.pathParameters.token1;
+	const fee = event.pathParameters.fee;
+	const tickSpacing = event.pathParameters.tickSpacing;
 	const hash = event.pathParameters.hash;
 
   await eventHandler(
-    eventName,
-    tokenId,
     blockNumber,
-    amount0,
-    amount1,
+    poolAddress,
+    token0Address,
+    token1Address,
+    fee,
+    tickSpacing,
     hash
   ).then(() => {
     return {
