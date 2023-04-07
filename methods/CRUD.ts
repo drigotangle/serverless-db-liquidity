@@ -1,5 +1,4 @@
 import { MongoClient, ServerApiVersion  } from 'mongodb'
-import { eventNames } from 'process';
 
 //@ts-ignore
 const mongoClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
