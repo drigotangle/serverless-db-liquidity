@@ -10,10 +10,7 @@ import {
 import { WETH_ADDRESS } from '../constants/index'
 import { insertPool } from './CRUD'
 
-const ERC20 = require('../ABI/ERC20.json')
-
 export const eventHandler = async (blockNumber, poolAddress, token0Address, token1Address, fee, tickSpacing, hash) => {
-       
     try {
         const token0 = tokenInstance(token0Address)
         const token1 = tokenInstance(token1Address)
@@ -31,15 +28,15 @@ export const eventHandler = async (blockNumber, poolAddress, token0Address, toke
 
         if(token1Address === WETH_ADDRESS){
             const pool = poolInstance(poolAddress)
-            const slot0 = await pool.slot({blockTag: blockNumber})
-            const sqrtPrice = slot0.sqrtPriceX96._hex
+            const { sqrtPriceX96 } = await pool.slot({blockTag: blockNumber})
+            const sqrtPrice = sqrtPriceX96._hex
             price = sqrtPriceToPrice(sqrtPrice, decimals0, decimals1)
         }
 
         if(token0Address === WETH_ADDRESS){
             const pool = poolInstance(poolAddress)
-            const slot0 = await pool.slot({blockTag: blockNumber})
-            const sqrtPrice = slot0.sqrtPriceX96._hex
+            const { sqrtPriceX96 } = await pool.slot({blockTag: blockNumber})
+            const sqrtPrice = sqrtPriceX96._hex
             const formatedPrice = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPrice)
             price = formatedPrice
         }
