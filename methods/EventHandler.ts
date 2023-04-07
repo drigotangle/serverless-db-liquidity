@@ -12,14 +12,15 @@ import {
 
 import { WETH_ADDRESS } from '../constants/index'
 import { inserSwap } from './CRUD'
+import { ethers } from 'ethers'
 
 export const eventHandler = async (
     blockNumber, 
     poolAddress, 
     eventName, 
     hash,
-    amount0,
-    amount1,
+    _amount0,
+    _amount1,
     sqrtPriceX96,
     account
     ) => {
@@ -36,6 +37,10 @@ export const eventHandler = async (
         const symbol1 = await token1.symbol()
         const decimals0 = await token0.decimals()
         const decimals1 = await token1.decimals()
+        const string0 = new ethers.BigNumber.from(_amount0).toString()
+        const string1 = new ethers.BigNumber.from(_amount1).toString()
+        const amount0 = parseInt(string0)
+        const amount1 = parseInt(string1)
         const time = await getBlockTimestamp(blockNumber)
         let price
         let value
