@@ -68,6 +68,11 @@ export const formatPrice = (token0Address, token1Address, decimals0, decimals1, 
     return formatedPrice
 }
 
+export const formatAmount = (amount, decimals): number => {
+    const formatedAmount = amount * (10 ** decimals)
+    return formatedAmount
+}
+
 export const choosePrice = 
     (
     wethPrice: number | undefined = undefined, 

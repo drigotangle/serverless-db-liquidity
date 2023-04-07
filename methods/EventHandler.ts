@@ -5,7 +5,8 @@ import {
     tokenInstance,
     nftManagerInstance,
     getDeeperPriceAndLiquidity,
-    choosePrice
+    choosePrice,
+    formatAmount
  } from './'
 
 import { WETH_ADDRESS } from '../constants/index'
@@ -94,10 +95,8 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
                 price0 = choosePrice(wethPrice0[0].price, deeperPrice0[0].price)
                 price1 = choosePrice(wethPrice1[0].price, deeperPrice1[0].price)
                 
-                const priceAndLiquidity0 = await getWethPriceAndLiquidity(token0Address, blockNumber)
-                const value0 = (priceAndLiquidity0[0]?.price ?? 0) * (amount0) / (10 ** decimals0)
-                const priceAndLiquidity1 = await getWethPriceAndLiquidity(token1Address, blockNumber)
-                const value1 = (priceAndLiquidity1[0]?.price ?? 0) * (Number(amount0) / (10 ** decimals0))
+                const value0 = price0 * formatAmount(amount0, decimals0)
+                const value1 = price1 * formatAmount(amount1, decimals1)
                 const sumValue = value0 + value1
 
                 await updateTVL(eventName, blockNumber, time, hash, sumValue, poolAddress)
@@ -120,6 +119,6 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
             }
 
     } catch (error) {
-        
+        return error
     }
 }
