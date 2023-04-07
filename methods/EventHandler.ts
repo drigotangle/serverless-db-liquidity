@@ -12,7 +12,6 @@ import {
 import { WETH_ADDRESS } from '../constants/index'
 import { insertLiquidity, updateTVL } from './CRUD'
 
-const ERC20 = require('../ABI/ERC20.json')
 
 export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amount1, hash) => {
 
@@ -37,53 +36,18 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
         const time = await getBlockTimestamp(blockNumber)
         let price0
         let price1
+        let value
         
         amount0 = amount0 / (10 ** decimals0)
         amount1 = amount1 / (10 ** decimals1)
     
 
             if(position.token0 === WETH_ADDRESS){
-                const value = amount0 * 2
-
-                await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
-
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    value,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
+                value = amount0 * 2
             }
 
             if(position.token1 === WETH_ADDRESS){
-                const value = amount1 * 2
-
-                await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
-
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    value,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
+                value = amount1 * 2
             }
 
             if(![position.token1, position.token2].includes(WETH_ADDRESS)){
@@ -97,27 +61,25 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
                 
                 const value0 = price0 * formatAmount(amount0, decimals0)
                 const value1 = price1 * formatAmount(amount1, decimals1)
-                const sumValue = value0 + value1
-
-                await updateTVL(eventName, blockNumber, time, hash, sumValue, poolAddress)
-
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    sumValue,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
+                value = value0 + value1
             }
 
+            await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
+            await insertLiquidity(
+                blockNumber,
+                eventName,
+                token0Address,
+                token1Address,
+                value,
+                symbol0,
+                symbol1,
+                amount0,
+                amount1,
+                account,
+                time,
+                hash,
+                poolAddress
+            )
     } catch (error) {
         return error
     }
