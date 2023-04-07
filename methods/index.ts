@@ -21,6 +21,11 @@ export const nftManagerInstance = (): any => {
     return nftManager
 }
 
+export const poolInstance = (address: string) => {
+    const pool = new ethers.Contract(address, POOL_ARTIFACT, provider)
+    return pool
+}
+
 export const getPoolAddress = async (token0, token1, fee): Promise<string | any> => {
     try {
         const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
