@@ -3,15 +3,32 @@ import {
     getBlockTimestamp,
     getWethPriceAndLiquidity,
     poolInstance,
-    sqrtPriceToPrice,
+    getDeeperPriceAndLiquidity,
     tokenInstance,
+    formatAmount,
+    choosePrice,
+    formatFee,
  } from './'
 
 import { WETH_ADDRESS } from '../constants/index'
-import { insertPool } from './CRUD'
+import { inserSwap } from './CRUD'
 
-export const eventHandler = async (blockNumber, poolAddress, token0Address, token1Address, fee, tickSpacing, hash) => {
+export const eventHandler = async (
+    blockNumber, 
+    poolAddress, 
+    eventName, 
+    hash,
+    amount0,
+    amount1,
+    sqrtPriceX96,
+    account
+    ) => {
     try {
+        const pool = poolInstance(poolAddress)
+        const token0Address = await pool.token0()
+        const token1Address = await pool.token1()
+        const fee = await pool.fee()
+
         const token0 = tokenInstance(token0Address)
         const token1 = tokenInstance(token1Address)
 
@@ -19,53 +36,71 @@ export const eventHandler = async (blockNumber, poolAddress, token0Address, toke
         const symbol1 = await token1.symbol()
         const decimals0 = await token0.decimals()
         const decimals1 = await token1.decimals()
-        const name0 = await token0.name()
-        const name1 = await token1.name()
         const time = await getBlockTimestamp(blockNumber)
-        const balance1 = await token1.balanceOf(poolAddress)
         let price
-        let liquidity
+        let value
+        let feePaid
 
-        if(token1Address === WETH_ADDRESS){
-            const pool = poolInstance(poolAddress)
-            const { sqrtPriceX96 } = await pool.slot({blockTag: blockNumber})
-            const sqrtPrice = sqrtPriceX96._hex
-            price = sqrtPriceToPrice(sqrtPrice, decimals0, decimals1)
+        //SOLD TOKEN1
+        if(amount1 > amount0 ){
+            if(token0 === WETH_ADDRESS){
+                price = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPriceX96)
+                value = formatAmount(amount1, decimals1) * price
+                feePaid = formatFee(fee, value)
+            }
+
+            if(token1 === WETH_ADDRESS){
+                value = (amount1 / (10 ** decimals1))
+                feePaid = formatFee(fee, value)
+            }
+
+            if(![token0Address, token1Address].includes(WETH_ADDRESS)){
+                const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
+                const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
+                price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
+                value = formatAmount(amount1, decimals1) * price
+                feePaid = formatFee(fee, value)
+            }            
         }
 
-        if(token0Address === WETH_ADDRESS){
-            const pool = poolInstance(poolAddress)
-            const { sqrtPriceX96 } = await pool.slot({blockTag: blockNumber})
-            const sqrtPrice = sqrtPriceX96._hex
-            const formatedPrice = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPrice)
-            price = formatedPrice
+        //SOLD TOKEN0
+        if(amount0 > amount1){
+            if(token0 === WETH_ADDRESS){
+                value = (amount0 / (10 ** decimals1))
+                feePaid = formatFee(fee, value)
+            }
+
+            if(token1 === WETH_ADDRESS){
+                price = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPriceX96)
+                value = formatAmount(amount0, decimals0) * price
+                feePaid = formatFee(fee, value)
+            }
+
+            if(![token0Address, token1Address].includes(WETH_ADDRESS)){
+                const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
+                const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
+                price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
+                value = formatAmount(amount1, decimals1) * price
+                feePaid = formatFee(fee, value)
+            }  
         }
 
-        if(![token0Address, token1Address].includes(WETH_ADDRESS)){
-            const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
-            price = wethPrice[0].price
-            liquidity = (Number(balance1._hex) / (10 ** decimals1)) * (wethPrice[0].price ?? 0)
-        }
-
-        await insertPool(
+        await inserSwap(
+            blockNumber,
+            eventName,
+            value,
             token0Address,
             token1Address,
             symbol0,
             symbol1,
-            name0,
-            name1,
-            decimals0,
-            decimals1,
-            liquidity,
-            price,
-            fee,
-            tickSpacing,
-            poolAddress,
+            amount0,
+            amount1,
+            account,
             time,
-            blockNumber,
-            hash
+            hash,
+            feePaid,
             )
     } catch (error) {
-        
+        return error
     }
 }
