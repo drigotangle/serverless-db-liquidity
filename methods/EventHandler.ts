@@ -82,7 +82,6 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
             }
 
             if(![position.token1, position.token2].includes(WETH_ADDRESS)){
-
                 const priceAndLiquidity0 = await getWethPriceAndLiquidity(token0Address, blockNumber)
                 const value0 = (priceAndLiquidity0[0]?.price ?? 0) * (amount0) / (10 ** decimals0)
                 const priceAndLiquidity1 = await getWethPriceAndLiquidity(token1Address, blockNumber)

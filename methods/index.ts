@@ -1,7 +1,7 @@
 import ethers from 'ethers'
 import moment from 'moment'
 
-import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS } from '../constants/index'
+import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS, PINNED_PAIRS, FEE_ARR } from '../constants/index'
 import { IPoolData, IPoolsArr } from '../interfaces'
 
 const FACTORY_ARTIFACT = require('../ABI/V3Factory.json')
@@ -19,6 +19,11 @@ export const tokenInstance = (address): any => {
 export const nftManagerInstance = (): any => {
     const nftManager = new ethers.Contract(NFT_MANAGER_ADDRESS, NftManager.abi, provider) 
     return nftManager
+}
+
+export const factoryInstance = (): any => {
+    const token = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
+    return token
 }
 
 export const getPoolAddress = async (token0, token1, fee): Promise<string | any> => {
@@ -61,6 +66,25 @@ export const formatPrice = (token0Address, token1Address, decimals0, decimals1, 
         formatedPrice = 1 / formatedPrice 
     }
     return formatedPrice
+}
+
+export const choosePrice = 
+    (
+    wethPrice: number | undefined = undefined, 
+    deeperPrice: number | undefined = undefined
+    ): number | undefined => {
+    if(![wethPrice, deeperPrice].includes(undefined)){
+        //@ts-ignore
+        return wethPrice > deeperPrice ? wethPrice : deeperPrice
+    }
+    
+    if(wethPrice === undefined && deeperPrice !== undefined){
+        return deeperPrice
+    }
+
+    if(wethPrice !== undefined && wethPrice === undefined){
+        return wethPrice
+    }
 }
 
 export const getPoolData = async (poolAddress, blockNumber): Promise<IPoolData | any> => {
@@ -107,5 +131,35 @@ export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IP
             return poolsArr
     } catch (error) {
         console.log(error, 'for getWethPriceAndLiquidity')
+    }
+}
+
+export const getDeeperPriceAndLiquidity = async (address, blockNumber):  Promise<IPoolsArr[] | any> => {
+    let poolsArr: IPoolsArr[] = []
+    try {
+        const factory = factoryInstance()
+        for(const fee of FEE_ARR){
+            for(const pinnedAddress of PINNED_PAIRS){
+                const pinnedPoolAddress = await factory.getPool(address, pinnedAddress, fee)
+                if(pinnedPoolAddress !== ZERO_ADDRESS){
+                    const pinnedPool: IPoolData = await getPoolData(pinnedPoolAddress, blockNumber)
+                    const wethPool: IPoolsArr[] = await getWethPriceAndLiquidity(pinnedAddress, blockNumber)
+                    const wethContract = tokenInstance(WETH_ADDRESS)
+                    const wethBalance = await wethContract.balanceOf(wethPool[0].poolAddress, {blockTag: blockNumber})
+                    const price = pinnedPool.price * wethPool[0].price
+                    poolsArr.push({
+                        poolAddress: pinnedPoolAddress,
+                        price: price,
+                        wethBalance: Number(wethBalance._hex) / (10 ** 18)
+                    })
+                }
+            }
+        }
+        poolsArr.sort((a, b) => {
+            return b.wethBalance - a.wethBalance
+        })
+        return poolsArr
+    } catch (error) {
+        
     }
 }
