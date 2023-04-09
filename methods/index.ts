@@ -69,7 +69,7 @@ export const formatPrice = (token0Address, token1Address, decimals0, decimals1, 
 }
 
 export const formatAmount = (amount, decimals): number => {
-    const formatedAmount = amount * (10 ** decimals)
+    const formatedAmount = amount / (10 ** decimals)
     return formatedAmount
 }
 

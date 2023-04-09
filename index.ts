@@ -15,7 +15,7 @@ module.exports.handler = async (event) => {
     blockNumber,
     amount0,
     amount1,
-    hash
+    hash,
   ).then(() => {
     return {
       statusCode: 200,
