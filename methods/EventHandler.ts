@@ -13,7 +13,7 @@ import { WETH_ADDRESS } from '../constants/index'
 import { insertLiquidity, updateTVL } from './CRUD'
 
 
-export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amount1, hash) => {
+export const eventHandler = async (eventName: string, tokenId: any, blockNumber: number, amount0: any, amount1: any, hash: string) => {
 
     const NFPM = nftManagerInstance()
 
@@ -36,7 +36,23 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
         const time = await getBlockTimestamp(blockNumber)
         let price0
         let price1
-        let value
+        let value: any
+
+        console.log(
+            blockNumber,
+            eventName,
+            token0Address,
+            token1Address,
+            value,
+            symbol0,
+            symbol1,
+            amount0,
+            amount1,
+            account,
+            time,
+            hash,
+            poolAddress
+        )
         
         amount0 = amount0 / (10 ** decimals0)
         amount1 = amount1 / (10 ** decimals1)
@@ -51,36 +67,45 @@ export const eventHandler = async (eventName, tokenId, blockNumber, amount0, amo
             }
 
             if(![position.token1, position.token2].includes(WETH_ADDRESS)){
-                const wethPrice0 = await getWethPriceAndLiquidity(token0Address, blockNumber)
-                const deeperPrice0 = await getDeeperPriceAndLiquidity(token0Address, blockNumber)
-                const wethPrice1 = await getWethPriceAndLiquidity(token1Address, blockNumber)
-                const deeperPrice1 = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
-
-                price0 = choosePrice(wethPrice0[0].price, deeperPrice0[0].price)
-                price1 = choosePrice(wethPrice1[0].price, deeperPrice1[0].price)
-                
-                const value0 = price0 * formatAmount(amount0, decimals0)
-                const value1 = price1 * formatAmount(amount1, decimals1)
-                value = value0 + value1
+                Promise.all([
+                    getWethPriceAndLiquidity(token0Address, blockNumber),
+                    getDeeperPriceAndLiquidity(token0Address, blockNumber),
+                    getWethPriceAndLiquidity(token1Address, blockNumber),
+                    getDeeperPriceAndLiquidity(token1Address, blockNumber)
+                ]).then(([
+                    wethPrice0,
+                    deeperPrice0,
+                    wethPrice1,
+                    deeperPrice1
+                ]) => {
+                    price0 = choosePrice(wethPrice0[0]?.price, deeperPrice0[0]?.price)
+                    price1 = choosePrice(wethPrice1[0]?.price, deeperPrice1[0]?.price)
+                    
+                    //@ts-ignore
+                    const value0 = price0 * formatAmount(amount0, decimals0)
+                    //@ts-ignore
+                    const value1 = price1 * formatAmount(amount1, decimals1)
+                    value = value0 + value1
+                })
+                //@ts-ignore
+                await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
+                await insertLiquidity(
+                    blockNumber,
+                    eventName,
+                    token0Address,
+                    token1Address,
+                    value,
+                    symbol0,
+                    symbol1,
+                    amount0,
+                    amount1,
+                    account,
+                    time,
+                    hash,
+                    poolAddress
+                )
             }
-
-            await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
-            await insertLiquidity(
-                blockNumber,
-                eventName,
-                token0Address,
-                token1Address,
-                value,
-                symbol0,
-                symbol1,
-                amount0,
-                amount1,
-                account,
-                time,
-                hash,
-                poolAddress
-            )
-    } catch (error) {
-        return error
+    } catch (error: any) {
+        console.log(error.message, 'for handle event') 
     }
 }

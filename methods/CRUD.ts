@@ -1,5 +1,6 @@
 import { MongoClient, ServerApiVersion  } from 'mongodb'
-import { eventNames } from 'process';
+
+const uri = 'mongodb+srv://burgossrodrigo:BeREmhPli0p3qFTq@tangle.hkje2xt.mongodb.net/?retryWrites=true&w=majority'
 
 //@ts-ignore
 const mongoClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
@@ -39,7 +40,6 @@ export const insertLiquidity = async (
         /**
          * @tangular here goes the mongo logic
          */
-
         await mongoClient.connect()
         const liquidityTxCollection = await mongoClient.db("tangle-db-shimmer").collection("liquidity-transactions")
         await liquidityTxCollection.insertOne({ 
@@ -57,8 +57,8 @@ export const insertLiquidity = async (
             hash: hash,
             poolAddress: poolAddress
         })
-    } catch (error) {
-        
+    } catch (error: any) {
+        console.log(error.message, 'insertLiquidity')
     }
 }
 
@@ -82,7 +82,7 @@ export const updateTVL = async (
             await tvlCollection.insertOne({ time: time, tvl: currentlyTVL - sumValue, wethToken1: true, blockNumber: blockNumber, hash: hash, poolAddress: poolAddress })
         }
 
-    } catch (error) {
-        
+    } catch (error: any) {
+        console.log(error.message, 'updateTVL')
     }
 }
