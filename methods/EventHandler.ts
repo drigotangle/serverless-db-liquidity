@@ -1,16 +1,26 @@
 import { 
+    choosePrice,
+    formatAmount,
     formatPrice,
     getBlockTimestamp,
+    getDeeperPriceAndLiquidity,
     getWethPriceAndLiquidity,
     poolInstance,
-    sqrtPriceToPrice,
     tokenInstance,
  } from './'
 
 import { WETH_ADDRESS } from '../constants/index'
 import { insertPool } from './CRUD'
 
-export const eventHandler = async (blockNumber, poolAddress, token0Address, token1Address, fee, tickSpacing, hash) => {
+export const eventHandler = async (
+    blockNumber: number, 
+    poolAddress: string, 
+    token0Address: string, 
+    token1Address: string, 
+    fee: number, 
+    tickSpacing: number, 
+    hash: string
+    ) => {
     try {
         const token0 = tokenInstance(token0Address)
         const token1 = tokenInstance(token1Address)
@@ -23,28 +33,32 @@ export const eventHandler = async (blockNumber, poolAddress, token0Address, toke
         const name1 = await token1.name()
         const time = await getBlockTimestamp(blockNumber)
         const balance1 = await token1.balanceOf(poolAddress)
-        let price
-        let liquidity
+        const balance0 = await token0.balanceOf(poolAddress)
+        let price = 0
+        let liquidity = 0
 
         if(token1Address === WETH_ADDRESS){
             const pool = poolInstance(poolAddress)
-            const { sqrtPriceX96 } = await pool.slot({blockTag: blockNumber})
+            const { sqrtPriceX96 } = await pool.slot0({blockTag: blockNumber})
             const sqrtPrice = sqrtPriceX96._hex
-            price = sqrtPriceToPrice(sqrtPrice, decimals0, decimals1)
+            price = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPrice)
+            liquidity = formatAmount(Number(balance1._hex), decimals1)
         }
 
         if(token0Address === WETH_ADDRESS){
             const pool = poolInstance(poolAddress)
-            const { sqrtPriceX96 } = await pool.slot({blockTag: blockNumber})
+            const { sqrtPriceX96 } = await pool.slot0({blockTag: blockNumber})
             const sqrtPrice = sqrtPriceX96._hex
             const formatedPrice = formatPrice(token0Address, token1Address, decimals0, decimals1, sqrtPrice)
             price = formatedPrice
+            liquidity = formatAmount(Number(balance0._hex), decimals0)
         }
 
         if(![token0Address, token1Address].includes(WETH_ADDRESS)){
             const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
-            price = wethPrice[0].price
-            liquidity = (Number(balance1._hex) / (10 ** decimals1)) * (wethPrice[0].price ?? 0)
+            const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
+            price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
+            liquidity = (Number(balance1._hex), decimals1) * price
         }
 
         await insertPool(
@@ -65,7 +79,7 @@ export const eventHandler = async (blockNumber, poolAddress, token0Address, toke
             blockNumber,
             hash
             )
-    } catch (error) {
-        
+    } catch (error: any) {
+        console.log(error.message)
     }
 }

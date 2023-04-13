@@ -1,8 +1,9 @@
-import ethers from 'ethers'
+import { ethers } from 'ethers'
 import moment from 'moment'
 
-import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS, FEE_ARR, PINNED_PAIRS } from '../constants/index'
+import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS, PINNED_PAIRS, FEE_ARR } from '../constants/index'
 import { IPoolData, IPoolsArr } from '../interfaces'
+import { ERC20, Nonfungiblepositionmanager, V3Factory } from '../types/ethers-contracts'
 
 const FACTORY_ARTIFACT = require('../ABI/V3Factory.json')
 const POOL_ARTIFACT = require('../ABI/V3Pool.json')
@@ -11,14 +12,19 @@ const NftManager = require('../ABI/Nonfungiblepositionmanager.json')
 
 
 
-export const tokenInstance = (address): any => {
+export const tokenInstance = (address: string): any => {
     const token = new ethers.Contract(address, ERC20_ABI, provider)
     return token
 }
 
 export const nftManagerInstance = (): any => {
-    const nftManager = new ethers.Contract(NFT_MANAGER_ADDRESS, NftManager.abi, provider) 
+    const nftManager = new ethers.Contract(NFT_MANAGER_ADDRESS, NftManager.abi, provider)
     return nftManager
+}
+
+export const factoryInstance = (): any => {
+    const token = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
+    return token
 }
 
 export const poolInstance = (address: string) => {
@@ -26,17 +32,12 @@ export const poolInstance = (address: string) => {
     return pool
 }
 
-export const factoryInstance = () => {
-    const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
-    return factory
-}
-
-export const getPoolAddress = async (token0, token1, fee): Promise<string | any> => {
+export const getPoolAddress = async (token0: string, token1: string, fee: string): Promise<string | any> => {
     try {
         const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
         const poolAddress = await factory.getPool(token0, token1, fee)
         return poolAddress
-    } catch (error) {
+    } catch (error: any) {
         console.log(error.message, 'for getPoolAddress')
     }
 }
@@ -52,7 +53,7 @@ export const getBlockTimestamp = async (blockNumber: number): Promise<string | a
     }
   }
 
-export const sqrtPriceToPrice = (sqrtPriceX96, token0Decimals, token1Decimals): number => {
+export const sqrtPriceToPrice = (sqrtPriceX96: any, token0Decimals: any, token1Decimals: any): number => {
   
     let mathPrice = Number(sqrtPriceX96) ** 2 / 2 ** 192;
   
@@ -62,7 +63,7 @@ export const sqrtPriceToPrice = (sqrtPriceX96, token0Decimals, token1Decimals): 
     return price;
   };
 
-export const formatPrice = (token0Address, token1Address, decimals0, decimals1, sqrtPriceX96): number => {
+export const formatPrice = (token0Address: string, token1Address: string, decimals0: number, decimals1: number, sqrtPriceX96: any): number => {
     if(token0Address > token1Address){
         [ decimals0, decimals1 ] = [ decimals1, decimals0]
     }
@@ -73,21 +74,16 @@ export const formatPrice = (token0Address, token1Address, decimals0, decimals1, 
     return formatedPrice
 }
 
-export const formatAmount = (amount, decimals): number => {
+export const formatAmount = (amount: number, decimals: number): number => {
     const formatedAmount = amount / (10 ** decimals)
     return formatedAmount
-}
-
-export const formatFee = (fee, value): number => {
-    const feePaid = (fee / 10000) * value
-    return feePaid
 }
 
 export const choosePrice = 
     (
     wethPrice: number | undefined = undefined, 
     deeperPrice: number | undefined = undefined
-    ): number | undefined => {
+    ): number | any => {
     if(![wethPrice, deeperPrice].includes(undefined)){
         //@ts-ignore
         return wethPrice > deeperPrice ? wethPrice : deeperPrice
@@ -97,12 +93,16 @@ export const choosePrice =
         return deeperPrice
     }
 
-    if(wethPrice !== undefined && wethPrice === undefined){
+    if(wethPrice !== undefined && deeperPrice === undefined){
         return wethPrice
+    }
+
+    if(wethPrice === undefined && deeperPrice === undefined){
+        return 0
     }
 }
 
-export const getPoolData = async (poolAddress, blockNumber): Promise<IPoolData | any> => {
+export const getPoolData = async (poolAddress: string, blockNumber: number): Promise<IPoolData | any> => {
     try {
         const pool = new ethers.Contract(poolAddress, POOL_ARTIFACT, provider)
         const token0Address = await pool.token0()
@@ -115,22 +115,23 @@ export const getPoolData = async (poolAddress, blockNumber): Promise<IPoolData |
         const price = formatPrice(token0Address, token1Address, decimals0, decimals1, slot0.sqrtPriceX96._hex)
         const result = { price, token0Address, token1Address, decimals0, decimals1, token1, token0 }
         return result
-    } catch (error) {
+    } catch (error: any) {
         console.log(error.message, error.line, 'from getPoolData')
     }
 }
 
-export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IPoolsArr[] | any> => {
+export const getWethPriceAndLiquidity = async (address: string, blockNumber: any): Promise<IPoolsArr[] | any> => {
+    const feesArr = [500, 3000, 10000]
     let poolsArr: IPoolsArr[] = []
     try {
-            const factory = factoryInstance()
-            for(let i = 0; i < FEE_ARR.length; i++){
-                const fee = FEE_ARR[i]
+            const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
+            for(let i = 0; i < feesArr.length; i++){
+                const fee = feesArr[i]
                 const poolAddress = await factory.getPool(address, WETH_ADDRESS, fee)
                 if(poolAddress !== ZERO_ADDRESS){
                     const poolContract: IPoolData = await getPoolData(poolAddress, blockNumber)
                     let price = poolContract?.price
-                    const wethContract = tokenInstance(WETH_ADDRESS)
+                    const wethContract = new ethers.Contract(WETH_ADDRESS, ERC20_ABI, provider)
                     const wethBalance = await wethContract.balanceOf(poolAddress, {blockTag: blockNumber})
                     poolsArr.push({
                         poolAddress: poolAddress,
@@ -143,12 +144,12 @@ export const getWethPriceAndLiquidity = async (address, blockNumber): Promise<IP
                 return b.wethBalance - a.wethBalance
             })
             return poolsArr
-    } catch (error) {
-        console.log(error, 'for getWethPriceAndLiquidity')
-    }
+        } catch (error: any) {
+            console.log(error.message, 'getWethPriceAndLiquidity')
+        }
 }
 
-export const getDeeperPriceAndLiquidity = async (address, blockNumber):  Promise<IPoolsArr[] | any> => {
+export const getDeeperPriceAndLiquidity = async (address: string, blockNumber: number):  Promise<IPoolsArr[] | any> => {
     let poolsArr: IPoolsArr[] = []
     try {
         const factory = factoryInstance()
@@ -173,7 +174,7 @@ export const getDeeperPriceAndLiquidity = async (address, blockNumber):  Promise
             return b.wethBalance - a.wethBalance
         })
         return poolsArr
-    } catch (error) {
-        
+    } catch (error: any) {
+        console.log(error.message, 'getDeeperPriceAndLiquidity')
     }
 }
