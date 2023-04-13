@@ -15,14 +15,14 @@ import { inserSwap } from './CRUD'
 import { ethers } from 'ethers'
 
 export const eventHandler = async (
-    blockNumber, 
-    poolAddress, 
-    eventName, 
-    hash,
-    _amount0,
-    _amount1,
-    sqrtPriceX96,
-    account
+    blockNumber: number, 
+    poolAddress: string, 
+    eventName: string | any, 
+    hash: string,
+    _amount0: number,
+    _amount1: number,
+    sqrtPriceX96: any | any,
+    account: string | any
     ) => {
     try {
         const pool = poolInstance(poolAddress)
@@ -42,9 +42,9 @@ export const eventHandler = async (
         const amount0 = parseInt(string0)
         const amount1 = parseInt(string1)
         const time = await getBlockTimestamp(blockNumber)
-        let price
-        let value
-        let feePaid
+        let price = 0
+        let value = 0
+        let feePaid= 0
 
         //SOLD TOKEN1
         if(amount1 > amount0 ){
@@ -85,7 +85,7 @@ export const eventHandler = async (
                 const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
                 const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
                 price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
-                value = formatAmount(amount1, decimals1) * price
+                value = formatAmount(amount0, decimals0) * price
                 feePaid = formatFee(fee, value)
             }  
         }

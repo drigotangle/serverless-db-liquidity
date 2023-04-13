@@ -1,4 +1,5 @@
-import ethers from 'ethers'
+import { ethers } from 'ethers'
+import { MongoClient, ServerApiVersion } from 'mongodb'
 
 export const wssProvider = new ethers.providers.WebSocketProvider("wss://ws.json-rpc.evm.testnet.shimmer.network/")
 export const provider = new ethers.providers.JsonRpcProvider("https://json-rpc.evm.testnet.shimmer.network")
@@ -12,3 +13,7 @@ export const PINNED_PAIRS = [
     '0x9484ec867B3D530042731E7D0966A71D8cb4D6EE', //USDC
     '0xB48c02399ceC969b60D3aeD14e04620Ec7A1d4D0', //WBTC
 ]
+export const uri = 'mongodb+srv://burgossrodrigo:BeREmhPli0p3qFTq@tangle.hkje2xt.mongodb.net/?retryWrites=true&w=majority'
+//@ts-ignore
+export const mongoClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 })
+
