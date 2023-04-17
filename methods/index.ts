@@ -121,12 +121,10 @@ export const getPoolData = async (poolAddress: string, blockNumber: number): Pro
 }
 
 export const getWethPriceAndLiquidity = async (address: string, blockNumber: any): Promise<IPoolsArr[] | any> => {
-    const feesArr = [500, 3000, 10000]
     let poolsArr: IPoolsArr[] = []
     try {
             const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ARTIFACT.abi, provider)
-            for(let i = 0; i < feesArr.length; i++){
-                const fee = feesArr[i]
+            for(const fee of FEE_ARR){
                 const poolAddress = await factory.getPool(address, WETH_ADDRESS, fee)
                 if(poolAddress !== ZERO_ADDRESS){
                     const poolContract: IPoolData = await getPoolData(poolAddress, blockNumber)
@@ -141,7 +139,7 @@ export const getWethPriceAndLiquidity = async (address: string, blockNumber: any
                 }
             }
             poolsArr.sort((a, b) => {
-                return b.wethBalance - a.wethBalance
+                return a.wethBalance - b.wethBalance
             })
             return poolsArr
         } catch (error: any) {
@@ -160,8 +158,8 @@ export const getDeeperPriceAndLiquidity = async (address: string, blockNumber: n
                     const pinnedPool: IPoolData = await getPoolData(pinnedPoolAddress, blockNumber)
                     const wethPool: IPoolsArr[] = await getWethPriceAndLiquidity(pinnedAddress, blockNumber)
                     const wethContract = tokenInstance(WETH_ADDRESS)
-                    const wethBalance = await wethContract.balanceOf(wethPool[0].poolAddress, {blockTag: blockNumber})
-                    const price = pinnedPool.price * wethPool[0].price
+                    const wethBalance = await wethContract.balanceOf(wethPool[0]?.poolAddress, {blockTag: blockNumber})
+                    const price = pinnedPool.price * wethPool[0]?.price
                     poolsArr.push({
                         poolAddress: pinnedPoolAddress,
                         price: price,
@@ -171,7 +169,7 @@ export const getDeeperPriceAndLiquidity = async (address: string, blockNumber: n
             }
         }
         poolsArr.sort((a, b) => {
-            return b.wethBalance - a.wethBalance
+            return a.wethBalance - b.wethBalance
         })
         return poolsArr
     } catch (error: any) {

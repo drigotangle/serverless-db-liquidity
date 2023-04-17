@@ -18,11 +18,12 @@ export const inserSwap = async (
     account: string,
     time: string,
     hash: string,
-    feePaid: number
+    feePaid: number,
+    address: string
 ) => {
     try {
         const collectionSwaps = await mongoClient.db("tangle-db-shimmer").collection("swap-transactions")
-        await collectionSwaps.insertOne({ 
+        const insert = await collectionSwaps.insertOne({ 
             block: blockNumber,
             eventName: eventName,
             value: value,
@@ -35,9 +36,11 @@ export const inserSwap = async (
             account: account,
             time: time,
             hash: hash,
-            feePaid: feePaid
+            feePaid: feePaid,
+            address: address
          })
-    } catch (error) {
-        return error
+         console.log(insert)
+    } catch (error: any) {
+        console.log(error.message, 'insert swap')
     }
 }

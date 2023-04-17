@@ -33,18 +33,21 @@ export const eventHandler = async (
         const token0 = tokenInstance(token0Address)
         const token1 = tokenInstance(token1Address)
 
+
         const symbol0 = await token0.symbol()
         const symbol1 = await token1.symbol()
         const decimals0 = await token0.decimals()
         const decimals1 = await token1.decimals()
-        const string0 = new (ethers.BigNumber.from(_amount0).toString() as any)
-        const string1 = new (ethers.BigNumber.from(_amount1).toString() as any)
+        const string0 = ethers.BigNumber.from(_amount0).toString()
+        const string1 = ethers.BigNumber.from(_amount1).toString()
         const amount0 = parseInt(string0)
         const amount1 = parseInt(string1)
         const time = await getBlockTimestamp(blockNumber)
         let price = 0
         let value = 0
-        let feePaid= 0
+        let feePaid = 0
+        const formatedAmount0 = formatAmount(amount0, decimals0)
+        const formatedAmount1 = formatAmount(amount1, decimals1)
 
         //SOLD TOKEN1
         if(amount1 > amount0 ){
@@ -55,14 +58,14 @@ export const eventHandler = async (
             }
 
             if(token1 === WETH_ADDRESS){
-                value = (amount1 / (10 ** decimals1))
+                value = formatAmount(amount1, decimals1)
                 feePaid = formatFee(fee, value)
             }
 
             if(![token0Address, token1Address].includes(WETH_ADDRESS)){
                 const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
                 const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
-                price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
+                price = choosePrice(wethPrice[0]?.price ?? 0, deeperPrice[0]?.price ?? 0)
                 value = formatAmount(amount1, decimals1) * price
                 feePaid = formatFee(fee, value)
             }            
@@ -82,13 +85,15 @@ export const eventHandler = async (
             }
 
             if(![token0Address, token1Address].includes(WETH_ADDRESS)){
-                const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
-                const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
-                price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
+                const wethPrice = await getWethPriceAndLiquidity(token0Address, blockNumber)
+                const deeperPrice = await getDeeperPriceAndLiquidity(token0Address, blockNumber)
+                price = choosePrice(wethPrice[0]?.price ?? 0, deeperPrice[0]?.price ?? 0)
                 value = formatAmount(amount0, decimals0) * price
                 feePaid = formatFee(fee, value)
             }  
         }
+
+        console.log(value, 'value outside')
 
         await inserSwap(
             blockNumber,
@@ -98,14 +103,15 @@ export const eventHandler = async (
             token1Address,
             symbol0,
             symbol1,
-            amount0,
-            amount1,
+            formatedAmount0,
+            formatedAmount1,
             account,
             time,
             hash,
             feePaid,
+            poolAddress
             )
-    } catch (error) {
-        return error
+    } catch (error: any) {
+        console.log(error.message, 'insertSwap')
     }
 }

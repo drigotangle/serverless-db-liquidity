@@ -11,7 +11,7 @@ export const FEE_ARR = [500, 3000, 10000]
 export const PINNED_PAIRS = [
     '0x23574310616A5d42E2c06364960d4AA1D3CA9DDB', //USDT
     '0x9484ec867B3D530042731E7D0966A71D8cb4D6EE', //USDC
-    '0xB48c02399ceC969b60D3aeD14e04620Ec7A1d4D0', //WBTC
+    '0x87bA1C836aDB867EFAD3f31AaED8C9E6F73C2510', //WBTC
 ]
 export const uri = 'mongodb+srv://burgossrodrigo:BeREmhPli0p3qFTq@tangle.hkje2xt.mongodb.net/?retryWrites=true&w=majority'
 //@ts-ignore
