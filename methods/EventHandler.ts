@@ -36,23 +36,7 @@ export const eventHandler = async (eventName: string, tokenId: any, blockNumber:
         const time = await getBlockTimestamp(blockNumber)
         let price0
         let price1
-        let value: any
-
-        console.log(
-            blockNumber,
-            eventName,
-            token0Address,
-            token1Address,
-            value,
-            symbol0,
-            symbol1,
-            amount0,
-            amount1,
-            account,
-            time,
-            hash,
-            poolAddress
-        )
+        let value
         
         amount0 = amount0 / (10 ** decimals0)
         amount1 = amount1 / (10 ** decimals1)
@@ -66,8 +50,8 @@ export const eventHandler = async (eventName: string, tokenId: any, blockNumber:
                 value = amount1 * 2
             }
 
-            if(![position.token1, position.token2].includes(WETH_ADDRESS)){
-                Promise.all([
+            if(![position.token0, position.token1].includes(WETH_ADDRESS)){
+                await Promise.all([
                     getWethPriceAndLiquidity(token0Address, blockNumber),
                     getDeeperPriceAndLiquidity(token0Address, blockNumber),
                     getWethPriceAndLiquidity(token1Address, blockNumber),
@@ -78,33 +62,47 @@ export const eventHandler = async (eventName: string, tokenId: any, blockNumber:
                     wethPrice1,
                     deeperPrice1
                 ]) => {
+
+                    console.log(
+                        wethPrice0,
+                        'wethPrice0',
+                        deeperPrice0,
+                        'deeperPrice0',
+                        wethPrice1,
+                        'wethPrice1'
+                    )
+
                     price0 = choosePrice(wethPrice0[0]?.price, deeperPrice0[0]?.price)
                     price1 = choosePrice(wethPrice1[0]?.price, deeperPrice1[0]?.price)
+                    console.log(price0, price1, 'prices')
                     
                     //@ts-ignore
                     const value0 = price0 * formatAmount(amount0, decimals0)
                     //@ts-ignore
                     const value1 = price1 * formatAmount(amount1, decimals1)
-                    value = value0 + value1
+                    value = (isNaN(value0) || value0 === undefined ? 0 : value0) + (isNaN(value1) || value1 === undefined ? 0 : value1)
                 })
-                //@ts-ignore
-                await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
-                await insertLiquidity(
-                    blockNumber,
-                    eventName,
-                    token0Address,
-                    token1Address,
-                    value,
-                    symbol0,
-                    symbol1,
-                    amount0,
-                    amount1,
-                    account,
-                    time,
-                    hash,
-                    poolAddress
-                )
             }
+
+            console.log(value, 'value outside')
+
+                            //@ts-ignore
+                            await updateTVL(eventName, blockNumber, time, hash, value, poolAddress)
+                            await insertLiquidity(
+                                blockNumber,
+                                eventName,
+                                token0Address,
+                                token1Address,
+                                value,
+                                symbol0,
+                                symbol1,
+                                amount0,
+                                amount1,
+                                account,
+                                time,
+                                hash,
+                                poolAddress
+                            )
     } catch (error: any) {
         console.log(error.message, 'for handle event') 
     }

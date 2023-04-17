@@ -25,7 +25,7 @@ export const insertLiquidity = async (
     eventName: string,
     token0Address: string,
     token1Address: string,
-    value: number,
+    value: number | any,
     symbol0: string,
     symbol1: string,
     amount0: number,
@@ -73,13 +73,13 @@ export const updateTVL = async (
     try {
         const currentlyTVL = await getLastTVL()
         const tvlCollection = await mongoClient.db("tangle-db-shimmer").collection("tvl")
-
+        const value = isNaN(sumValue) ? 0 : sumValue
         if(eventName === 'IncreaseLiquidity'){
-        await tvlCollection.insertOne({ time: time, tvl: currentlyTVL + sumValue, wethToken1: true, blockNumber: blockNumber, hash: hash, poolAddress: poolAddress })
+        await tvlCollection.insertOne({ time: time, tvl: currentlyTVL + value, wethToken1: true, blockNumber: blockNumber, hash: hash, poolAddress: poolAddress })
         }
 
         if(eventName === 'DecreaseLiquidity'){
-            await tvlCollection.insertOne({ time: time, tvl: currentlyTVL - sumValue, wethToken1: true, blockNumber: blockNumber, hash: hash, poolAddress: poolAddress })
+            await tvlCollection.insertOne({ time: time, tvl: currentlyTVL - value, wethToken1: true, blockNumber: blockNumber, hash: hash, poolAddress: poolAddress })
         }
 
     } catch (error: any) {
