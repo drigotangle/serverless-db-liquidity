@@ -57,7 +57,7 @@ export const eventHandler = async (
         if(![token0Address, token1Address].includes(WETH_ADDRESS)){
             const wethPrice = await getWethPriceAndLiquidity(token1Address, blockNumber)
             const deeperPrice = await getDeeperPriceAndLiquidity(token1Address, blockNumber)
-            price = choosePrice(wethPrice[0].price, deeperPrice[0].price)
+            price = choosePrice(wethPrice[0]?.price, deeperPrice[0]?.price)
             liquidity = (Number(balance1._hex), decimals1) * price
         }
 

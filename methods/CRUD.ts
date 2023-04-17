@@ -1,4 +1,5 @@
 import { MongoClient, ServerApiVersion  } from 'mongodb'
+import { getBlockTimestamp } from '.';
 
 const uri = 'mongodb+srv://burgossrodrigo:BeREmhPli0p3qFTq@tangle.hkje2xt.mongodb.net/?retryWrites=true&w=majority'
 
@@ -50,6 +51,57 @@ export const insertPool = async (
             hash: hash          
         })
     } catch (error) {
-        
+        await insertError(error, 'insertPool')
+    }
+}
+
+export const insertPrice = async (postId: any, blockNumber: number, price: number) => {
+    try {
+        const collection = await mongoClient.db("tangle-db-shimmer").collection("pools")
+        const documents = await collection.find({}).toArray()
+        const time = await getBlockTimestamp(blockNumber)
+        await collection.updateOne(
+            {_id: postId},
+            {$push: {price: {time: time, price: price, blockNumber: blockNumber}}}
+        )
+    } catch (error) {
+        await insertError(error, 'insertPrice')
+    }
+}
+
+export const insertLiquidity = async (postId: any, blockNumber: number, liquidity: number) => {
+    try {
+        const collection = await mongoClient.db("tangle-db-shimmer").collection("pools")
+        const time = await getBlockTimestamp(blockNumber)
+        await collection.updateOne(
+            {_id: postId},
+            {$push: {liquidity: {time: time, liquidity: liquidity, blockNumber: blockNumber}}}
+        )
+    } catch (error) {
+        await insertError(error, 'insertLiquidity')
+    }
+}
+
+export const insertError = async (error: any, event: string) => {
+    try {
+        const poolsCollection = await mongoClient.
+        db("tangle-db-shimmer").
+        collection("errors")
+        await poolsCollection.insertOne({
+            error: error.message,
+            event: event
+        })
+    } catch (error: any) {
+        console.log(error.message)
+    }
+}
+
+export const queryPools = async () => {
+    try {
+        const collection = await mongoClient.db("tangle-db-shimmer").collection("pools")
+        const documents = await collection.find({}).toArray()
+        return documents
+    } catch (error) {
+        await insertError(error, 'QueryPool')
     }
 }

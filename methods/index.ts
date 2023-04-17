@@ -4,6 +4,7 @@ import moment from 'moment'
 import { provider, ZERO_ADDRESS, WETH_ADDRESS, NFT_MANAGER_ADDRESS, FACTORY_ADDRESS, PINNED_PAIRS, FEE_ARR } from '../constants/index'
 import { IPoolData, IPoolsArr } from '../interfaces'
 import { ERC20, Nonfungiblepositionmanager, V3Factory } from '../types/ethers-contracts'
+import { insertPrice, insertError, insertLiquidity, queryPools } from './CRUD'
 
 const FACTORY_ARTIFACT = require('../ABI/V3Factory.json')
 const POOL_ARTIFACT = require('../ABI/V3Pool.json')
@@ -176,5 +177,60 @@ export const getDeeperPriceAndLiquidity = async (address: string, blockNumber: n
         return poolsArr
     } catch (error: any) {
         console.log(error.message, 'getDeeperPriceAndLiquidity')
+    }
+}
+
+export const pushPrice = async (blockNumber: number) => {
+    try {
+        const documents: any = await queryPools()
+            for(const data of documents){
+                const postId = data._id
+                if(data.block < blockNumber){
+                        if([!data.token0, data.token1].includes(WETH_ADDRESS)){
+                            const wethPrice = await getWethPriceAndLiquidity(data.token1, blockNumber)
+                            const deeperPrice = await getDeeperPriceAndLiquidity(data.token1, blockNumber)
+                            const price = choosePrice(wethPrice[0]?.price, deeperPrice[0]?.price)
+                            insertPrice(postId, blockNumber, price)
+                        } else {
+                            const poolData = await getPoolData(data.pool, blockNumber)
+                            insertPrice(postId, blockNumber, poolData?.price)
+                        }
+                }
+            }
+    } catch (error) {
+        await insertError(error, 'PUSH_PRICE')
+    }
+}
+
+export const pushLiquidity = async (blockNumber: number) => {
+    try {
+    const documents: any = await queryPools()
+        for(const data of documents){
+            const postId = data._id
+            if(data.block < blockNumber){
+                    if([!data.token0, data.token1].includes(WETH_ADDRESS)){
+                        const wethPrice = await getWethPriceAndLiquidity(data.token1, blockNumber)
+                        const deeperPrice = await getDeeperPriceAndLiquidity(data.token1, blockNumber)
+                        const liquidity = choosePrice(wethPrice[0]?.liquidity, deeperPrice[0]?.liquidity)
+                        insertLiquidity(postId, blockNumber, liquidity)
+                    }
+
+                    if(data.token0 === WETH_ADDRESS){
+                        const token = await tokenInstance(data.token0)
+                        const liquidity = await token.balanceOf(data.pool)
+                        const formatedLiquidity = formatAmount(Number(liquidity._hex), data.decimals0)
+                        insertLiquidity(postId, blockNumber, formatedLiquidity)
+                    }
+
+                    if(data.token1 === WETH_ADDRESS){
+                        const token = await tokenInstance(data.token1)
+                        const liquidity = await token.balanceOf(data.pool)
+                        const formatedLiquidity = formatAmount(Number(liquidity._hex), data.decimals1)
+                        insertLiquidity(postId, blockNumber, formatedLiquidity)
+                    }
+            }
+        }
+    } catch (error) {
+        await insertError(error, 'PUSH_LIQUIDITY')
     }
 }
